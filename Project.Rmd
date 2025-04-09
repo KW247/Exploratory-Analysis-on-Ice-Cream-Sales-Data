@@ -1,0 +1,338 @@
+---
+title: "Untitled"
+author: "yan"
+date: "2023-10-26"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+#Read data
+sales <- read.csv("D:/R studio/MT5762project/sales_data.csv")
+
+names(sales)
+
+#part 1
+# Load the required packages
+library(ggplot2)
+
+# Boxplot for icecream_sales
+ggplot(sales, aes(x = as.factor(1), y = icecream_sales)) +
+  geom_boxplot() +
+  labs(title = "Boxplot for Ice Cream Sales", x = NULL, y = "Ice Cream Sales") +
+  theme_light()
+
+# Boxplot for hotdrink_sales
+ggplot(sales, aes(x = as.factor(1), y = hotdrink_sales)) +
+  geom_boxplot() +
+  labs(title = "Boxplot for Hot Drink Sales", x = NULL, y = "Hot Drink Sales") +
+  theme_light()
+
+#summary hot drinks and ice creams
+hot <- summary(sales$hotdrink_sales)
+hot
+
+ice <- summary(sales$icecream_sales)
+ice
+
+
+#Part 2
+##a
+#predict the proportion of days with fewer than 200 ice cream
+icecream_below_200 <-sum(sales$icecream_sales < 200)/nrow(sales)
+icecream_below_200
+
+#calculate 95% confidence interval
+CI_low_icecream <- icecream_below_200 - 1.96*sqrt(icecream_below_200*(1-icecream_below_200)/nrow(sales))
+CI_high_icecream <- icecream_below_200 + 1.96*sqrt(icecream_below_200*(1-icecream_below_200)/nrow(sales))
+
+#print 95% CI
+CI_low_icecream
+CI_high_icecream
+
+##b
+#predict the proportion of days with fewer than  200 total sales (ice cream and hot drinks) 
+sales$total_sales <- sales$icecream_sales + sales$hotdrink_sales
+total_below_200 <- sum(sales$total_sales < 200)/nrow(sales)
+total_below_200
+#95% confidence interval for the proportion of days with fewer than  200 total sales
+CI_low_total <- total_below_200 - 1.96*sqrt(total_below_200*(1-total_below_200)/nrow(sales))
+CI_high_total <- total_below_200 + 1.96*sqrt(total_below_200*(1-total_below_200)/nrow(sales))
+# print 95% CI
+CI_low_total
+CI_high_total
+
+##c
+#Subset the data for January and August
+Jan_sales <- subset(sales, month_name == "Jan")
+Aug_sales <- subset(sales, month_name == "Aug")
+
+#Calculate the odds for January
+odds_Jan <- sum(Jan_sales$icecream_sales) / sum(Jan_sales$hotdrink_sales)
+
+#Calculate the odds for August
+odds_Aug <- sum(Aug_sales$icecream_sales) / sum(Aug_sales$hotdrink_sales)
+
+#Extract ice cream and hot drink sales for January
+jan_icecream_sales <- sum(Jan_sales$icecream_sales)
+jan_hotdrink_sales <- sum(Jan_sales$hotdrink_sales)
+
+#Calculate the 95% confidence interval for the odds in January
+jan_test_result <- prop.test(x = jan_icecream_sales, 
+                             n = jan_icecream_sales + jan_hotdrink_sales, 
+                             conf.level = 0.95)
+CI_Jan <- jan_test_result$conf.int
+
+
+#Extract ice cream and hot drink sales for August
+aug_icecream_sales <- sum(Aug_sales$icecream_sales)
+aug_hotdrink_sales <- sum(Aug_sales$hotdrink_sales)
+
+#Calculate the 95% confidence interval for the odds in August
+aug_test_result <- prop.test(x = aug_icecream_sales, 
+                             n = aug_icecream_sales + aug_hotdrink_sales, 
+                             conf.level = 0.95)
+CI_Aug <- aug_test_result$conf.int
+
+
+#print the result
+odds_Jan
+odds_Aug
+CI_Jan
+CI_Aug
+
+#d
+#assume some values
+a <- sum(Jan_sales$icecream_sales)
+b <- sum(Jan_sales$hotdrink_sales)
+c <- sum(Aug_sales$icecream_sales)
+d <- sum(Aug_sales$hotdrink_sales)
+
+#Calculate the odds for January and August
+odds_Jan <- a / b
+odds_Aug <- c / d
+
+
+#Compute the log odds
+log_odds_Jan <- log(odds_Jan)
+log_odds_Aug <- log(odds_Aug)
+
+#Calculate the standard error for the difference in log odds
+SE <- sqrt(1/a + 1/b + 1/c + 1/d)
+
+#Calculate the Z-statistic for the difference in log odds
+Z <- (log_odds_Jan - log_odds_Aug) / SE
+
+#Compute the two-tailed p-value for the Z-statistic
+p_value <- 2 * (1 - pnorm(abs(Z)))
+
+#print
+p_value
+
+
+
+# PART 3
+
+#a.
+#Group weekdays and weekends
+weekend_sales <- sales$icecream_sales[sales$weekend == 1]
+weekday_sales <- sales$icecream_sales[sales$weekend == 0]
+
+#t test
+t.test(weekend_sales, weekday_sales)
+
+#b
+#calculate diff between weekend and weekday
+obs_diff <- mean(weekend_sales) - mean(weekday_sales)
+obs_diff
+
+#calculate the sd of the weekend
+sd_weekend <- sd(weekend_sales)
+sd_weekend
+#use power.t.test()function to calculate the power
+power_result <- power.t.test(n = length(weekend_sales), 
+                             delta = obs_diff, sd = sd_weekend, 
+                             type = "two.sample",
+                             alternative = "two.sided")
+#print result
+power_result
+#print power
+power_result$power
+
+
+
+#c
+#Calculate the sample size
+sample_size <- length(weekend_sales)
+sample_size
+
+#Calculate the sd of the weekend sales
+standard_deviation <- sd(weekend_sales)
+standard_deviation
+
+#Define the desired power
+desired_power <- 0.90
+
+#Run the power analysis to find the effect size needed for 90% power
+result <- power.t.test(
+  n = sample_size,            
+  power = desired_power,      
+  sd = standard_deviation,   
+  type = "two.sample",       
+  alternative = "two.sided"   
+)
+
+result
+# Extract the effect size from the result
+effect_size <- result$delta
+
+# Print the effect size
+effect_size
+
+
+
+#d.
+# Calculate the observed difference between weekend and weekday sales
+observed_difference <- obs_diff
+observed_difference
+
+# Calculate the sd of the weekend sales
+standard_deviation <- sd(weekend_sales)
+standard_deviation
+
+# Define the desired power for the test
+desired_power <- 0.90
+
+# Run the power analysis to find the sample size needed for 90% power given the observed difference
+result <- power.t.test(
+  delta = observed_difference, 
+  power = desired_power,       
+  sd = standard_deviation,     
+  type = "two.sample",         
+  alternative = "two.sided"    
+)
+
+result
+# Extract the required sample size from the result
+required <- result$n
+
+# Print the required sample size
+required
+
+
+##PART 4
+# Fit the linear model
+model <- lm(icecream_sales ~ temperature + humidity + windspeed + weekend + bank_holiday + school_holidays, data=sales)
+# Print model summary
+summary(model)
+
+#draw a plot about temperature and sales
+temperature <- ggplot(sales, aes(x=temperature, y=icecream_sales)) + 
+  geom_point() +   # Data points
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  # Regression line
+  labs(x="Temperature(Degree Celsius)", y="Ice cream Sales", title="Ice cream Sales and Temperature") +
+  theme_minimal()
+#print the plot
+print(temperature)
+
+#draw a plot about humidity and sales
+humidity <- ggplot(sales, aes(x=humidity, y=icecream_sales)) + 
+  geom_point() +   # Data points
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  
+  labs(x="Humidity(%)", y="Ice cream Sales", title="Ice cream Sales and Humidity") +
+  theme_minimal()
+#print the plot
+print(humidity)
+
+#draw a plot about windspeed and sales
+windspeed <- ggplot(sales, aes(x=windspeed, y=icecream_sales)) + 
+  geom_point() +   
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  
+  labs(x="Windspeed(km/h)", y="Ice cream Sales", title="Ice cream Sales and windspeed") +
+  theme_minimal()
+#print the plot
+print(windspeed)
+
+#draw a plot about weekend and sales
+weekend <- ggplot(sales, aes(x=weekend, y=icecream_sales)) + 
+  geom_point() + 
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  
+  labs(x="Weekend(0 is weekday and 1 is weekend)", y="Ice cream Sales", title="Ice cream Sales and weekend") +
+  theme_minimal()
+#print the plot
+print(weekend)
+
+#draw a plot about Bank Holiday and sales
+bank_holiday <- ggplot(sales, aes(x=bank_holiday, y=icecream_sales)) + 
+  geom_point() +
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  
+  labs(x="Bank Holiday(1 is a bank holiday, 0 otherwise)", y="Ice cream Sales", title="Ice cream Sales and Bank Holiday") +
+  theme_minimal()
+#print the plot
+print(bank_holiday)
+
+#draw a plot about school holidays and sales
+school_holidays <- ggplot(sales, aes(x=school_holidays, y=icecream_sales)) + 
+  geom_point() +   
+  geom_smooth(method='lm', se=FALSE, color="blue", aes(color="Regression Line")) +  
+  labs(x="School Holidays(1 is school holiday,0 is otherwise)", y="Ice cream Sales", title="Ice cream Sales and School Holidays") +
+  theme_minimal()
+#print the plot
+print(school_holidays)
+
+
+#a.
+# a week day in May with temperature 18°C, 6% humidity, and 10 km/h windspeed;
+a_data <- data.frame(month_name = 'May',temperature=18, humidity=0.06, windspeed=10, weekend=0, bank_holiday=0, school_holidays=0)
+a_pred <- predict(model, newdata=a_data, interval="prediction")
+#print outcomes
+a_pred
+
+#b
+# a school holiday on a weekend in April with temperature 28°C, 35% humidity, and 5 km/h windspeed;
+b_data <- data.frame(month_name = 'Apr',temperature=28, humidity=0.35, windspeed=5, weekend=1, bank_holiday=0, school_holidays=1)
+b_pred <- predict(model, newdata=b_data, interval="prediction")
+#print
+b_pred
+
+#c
+# a week day in September with temperature 12°C, 90% humidity, and 35 km/h windspeed;
+c_data <- data.frame(month_name = 'Sep', temperature=12, humidity=0.90, windspeed=35, weekend=0, bank_holiday=0, school_holidays=0)
+c_pred <- predict(model, newdata=c_data, interval="prediction")
+#print
+c_pred
+
+
+#d
+# a day on a January weekend that is not a holiday with temperature -2°C, 75% humidity, and 15 km/h windspeed.
+d_data <- data.frame(month_name = 'Jan',temperature=-2, humidity=0.75, windspeed=15, weekend=1, bank_holiday=0, school_holidays=0)
+d_pred <- predict(model, newdata=d_data, interval="prediction")
+#print
+d_pred
+```
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
